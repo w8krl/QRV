@@ -32,17 +32,23 @@ Transfer files between two machines over a standard HDMI link by encoding data a
 | Component | Status |
 |-----------|--------|
 | Sender (`encoder.py`) | Proof of concept |
-| Receiver | Planned |
+| Receiver (`decoder.py`) | Proof of concept |
 
 ## Requirements
 
-- Python 3.9+
-- [Pillow](https://pypi.org/project/Pillow/)
-- [qrcode](https://pypi.org/project/qrcode/)
-- [imageio](https://pypi.org/project/imageio/) + [imageio-ffmpeg](https://pypi.org/project/imageio-ffmpeg/) (optional, for MP4 output)
+**Sender**
 
 ```bash
 pip install pillow qrcode imageio imageio-ffmpeg
+```
+
+- [Pillow](https://pypi.org/project/Pillow/), [qrcode](https://pypi.org/project/qrcode/) — required
+- [imageio](https://pypi.org/project/imageio/) + [imageio-ffmpeg](https://pypi.org/project/imageio-ffmpeg/) — optional (MP4 output)
+
+**Receiver**
+
+```bash
+pip install zxing-cpp opencv-python-headless
 ```
 
 ## Usage (Sender)
@@ -82,6 +88,32 @@ python encoder.py --in sample.bin --out ./out_frames --fps 30 \
     --ecc L --chunk 1800 --qr-version auto --video 1920x1080
 ```
 
+## Usage (Receiver)
+
+Decode a PNG frame sequence captured from HDMI (or exported from an MP4):
+
+```bash
+python decoder.py --in ./qr_frames --out decoded.bin
+```
+
+### Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--in` | *(required)* | Directory containing `frame_*.png` files |
+| `--out` | *(required)* | Output path for the reconstructed file |
+| `-v`, `--verbose` | off | Print per-frame decode details |
+
+### Round-trip example
+
+```bash
+# Dev B — encode
+python encoder.py --in sample.bin --out ./qr_frames
+
+# Dev A — decode (after capturing frames from HDMI)
+python decoder.py --in ./qr_frames --out sample.bin
+```
+
 ## Protocol (QRV1)
 
 Each frame carries a versioned binary header (`QRV1`) with CRC-16, followed by payload and CRC-32:
@@ -106,4 +138,4 @@ Dev B (Sender)                    Dev A (Receiver)
 └─────────────────┘               └─────────────────────────┘
 ```
 
-On the sender side, play the generated MP4 (or frame sequence) fullscreen over HDMI. On the receiver, connect a USB HDMI capture device and run the receiver app (coming soon) against the capture input.
+On the sender side, play the generated MP4 (or frame sequence) fullscreen over HDMI. On the receiver, connect a USB HDMI capture device, save captured frames as `frame_000000.png`, `frame_000001.png`, … and run `decoder.py` against that folder.
